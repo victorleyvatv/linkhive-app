@@ -1,11 +1,17 @@
 import { GoogleGenAI } from "@google/genai";
 import { AIClassificationResponse, Category } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Vite expone variables de entorno con import.meta.env
+const apiKey = import.meta.env.VITE_API_KEY;
+
+if (!apiKey) {
+  throw new Error("Missing VITE_API_KEY environment variable");
+}
+
+const ai = new GoogleGenAI({ apiKey });
 
 export const classifyUrl = async (url: string): Promise<AIClassificationResponse> => {
   try {
-    // Using gemini-2.5-flash as it supports Google Search grounding
     const model = "gemini-2.5-flash";
 
     const prompt = `
@@ -54,7 +60,7 @@ OUTPUT JSON (AS PLAIN TEXT):
 `;
 
     const response = await ai.models.generateContent({
-      model: model,
+      model,
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -64,12 +70,10 @@ OUTPUT JSON (AS PLAIN TEXT):
     let text = response.text;
     if (!text) throw new Error("No response from AI");
 
-    // Clean up potential markdown formatting
-    text = text.replace(/```json\n?/g, '').replace(/```/g, '').trim();
+    text = text.replace(/```json\n?/g, "").replace(/```/g, "").trim();
 
     const data = JSON.parse(text) as AIClassificationResponse;
     return data;
-
   } catch (error) {
     console.error("Error classifying URL:", error);
     throw error;
